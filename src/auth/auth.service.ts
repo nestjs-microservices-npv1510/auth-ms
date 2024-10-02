@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dtos/register.dto';
+import { LoginDto } from './dtos/login.dto';
 import { RpcException } from '@nestjs/microservices';
 
 // interfaces
@@ -32,11 +32,11 @@ export class AuthService extends PrismaClient implements OnModuleInit {
   }
 
   async register(registerDto: RegisterDto) {
+    // return registerDto;
     const { email, password, name } = registerDto;
     // return registerDto;
-    const isExistUser = await this.user.findUnique({ where: { email } });
 
-    if (isExistUser) {
+    if (await this.user.findUnique({ where: { email } })) {
       throw new RpcException('Email already exists');
     }
 
@@ -44,10 +44,10 @@ export class AuthService extends PrismaClient implements OnModuleInit {
       data: { email, password: bcrypt.hashSync(password, 12), name },
     });
 
-    const { id: newUserId } = newUser;
+    const { id } = newUser;
 
     // tokens
-    const accessToken = await this.signJwt({ id: newUserId });
+    const accessToken = await this.signJwt({ id });
     // console.log(accessToken);
 
     return {
@@ -60,6 +60,7 @@ export class AuthService extends PrismaClient implements OnModuleInit {
   }
 
   async login(loginDto: LoginDto) {
+    // return loginDto;
     const { email, password } = loginDto;
 
     const user = await this.user.findUnique({ where: { email } });
@@ -79,17 +80,14 @@ export class AuthService extends PrismaClient implements OnModuleInit {
   }
 
   async verifyToken(token: string) {
-    // verify token
-    try {
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: config.envs.JWT_SECRET_KEY,
-      });
-      return payload;
-    } catch (err) {
-      console.log(`ERROR WHEN VERIFYING: ${err}`);
+    // console.log('auth service verifyToken:', token);
+    // console.log(token);
+    // return token;
 
-      throw new RpcException(err);
-    }
+    // verify token
+    const payload = await this.jwtService.verifyAsync(token);
+    // console.log(payload);
+    return payload;
   }
 
   async findUserById(userId: string) {
